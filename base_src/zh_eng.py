@@ -1,9 +1,6 @@
 import chess.variant
 import eval_constants
 
-def find_best_move(board):
-	pass
-
 piece_values = {
 	chess.PAWN: 1,
 	chess.KNIGHT: 3,
@@ -50,8 +47,6 @@ def evaluate_board(board, color):
 	return eval_score_curr_player
 
 def evaluate_(board):
-	if board.turn == chess.BLACK:
-		return evaluate_board(board, chess.BLACK) - evaluate_board(board, chess.WHITE)
 	return evaluate_board(board, chess.WHITE) - evaluate_board(board, chess.BLACK)
 
 

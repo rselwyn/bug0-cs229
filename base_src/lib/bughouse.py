@@ -69,3 +69,15 @@ class BughouseBoard(object):
         first_board = self.boards[FIRST_BOARD]
         second_board = self.boards[SECOND_BOARD]
         return (first_board.fen(), second_board.fen())
+
+    def in_sync(self):
+        # We assume that the bot is playing black on board 1 and white on board 2, and that the first player has made their move
+        return self.boards[FIRST_BOARD].ply() == self.boards[SECOND_BOARD].ply() + 1
+
+    def visualize(self):
+        first_board = str(self.boards[FIRST_BOARD]).split('\n')
+        second_board = str(self.boards[SECOND_BOARD]).split('\n')
+        output = ""
+        for i in range(8):
+            output += first_board[i] + "    " + second_board[i] + '\n'
+        return output[:-1]

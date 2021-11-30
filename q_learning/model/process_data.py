@@ -38,10 +38,15 @@ def generate_boards_from_moves(board, moves):
     board.reset()
     boards.append(board.get_fens())
 
+    print(moves)
+
     for i in range(len(moves) // 2):
-        board_num = int(moves[i][-1].lower() == 'b')
-        move = moves[i+1].replace(re.search(r"{(.*?)}", moves[i+1]).group(0), "")
-        move = board.parse_san(move)
+        board_num = int(moves[2*i][-2].lower() == 'b')
+        move = moves[2*i+1]
+        assert len(move) != 3, print(move)
+        print(move)
+        move = move.replace(re.search(r"{(.*?)}", move).group(0), "")
+        move = board.parse_san(board_num, move)
         board.move(board_num, move)
         boards.append(board.get_fens())
     return boards

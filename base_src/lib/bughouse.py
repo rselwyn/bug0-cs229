@@ -82,18 +82,5 @@ class BughouseBoard(object):
             output += first_board[i] + "    " + second_board[i] + '\n'
         return output[:-1]
 
-    def generate_legal_zh_moves(self, board):
-        moves = list(board.legal_moves)  # Get all the standard moves
-
-        for sq in board.legal_drop_squares():  # All the legal squares that can receive a piece
-            for piece in ALL_PIECES:
-                if board.pockets[board.turn].count(piece) >= 1:
-                    moves.append(chess.Move(from_square=sq, to_square=sq, drop=piece))  # Add those as move options
-        return moves
-
-    def generate_legal_bug_moves(self, board, player_num):
-        assert board.in_sync()  # Boards need to be in sync
-        b1 = self.generate_legal_zh_moves(board.boards[0])
-        b2 = self.generate_legal_zh_moves(board.boards[1])
-
-        return [(b1[i], b2[j]) for i in range(len(b1)) for j in range(len(b2))]
+    def parse_san(self, board_num, san):
+        return self.boards[board_num].parse_san(san)

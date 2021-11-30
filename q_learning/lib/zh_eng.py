@@ -1,7 +1,5 @@
-import lib.bughouse as bug # the bughouse board
-import chess
+import chess.variant
 import eval_constants
-from zh_eng import ALL_PIECES
 
 piece_values = {
 	chess.PAWN: 1,
@@ -25,6 +23,7 @@ droppable_scalar = {
 	chess.KING: 0 # included to make the code later not need a special case.
 }
 
+ALL_PIECES = [chess.PAWN, chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.KING, chess.QUEEN]
 
 def evaluate_board(board, color):
 	eval_score_curr_player = 100 # Total Eval Score for the current position.  Start at 100 just to ensure > 0
@@ -47,21 +46,18 @@ def evaluate_board(board, color):
 
 	return eval_score_curr_player
 
-def generate_legal_zh_moves(board):
-	moves = list(board.legal_moves) # Get all the standard moves
+def evaluate_(board):
+	return evaluate_board(board, chess.WHITE) - evaluate_board(board, chess.BLACK)
 
-	for sq in board.legal_drop_squares(): # All the legal squares that can receive a piece
+
+def generate_legal_zh_moves(board):
+	moves = list(zh_board.legal_moves) # Get all the standard moves
+
+	for sq in zh_board.legal_drop_squares(): # All the legal squares that can receive a piece
 		for piece in ALL_PIECES:
 			if board.pockets[board.turn].count(piece) >= 1:
 				moves.append(chess.Move(from_square=sq, to_square=sq, drop=piece)) # Add those as move options
 	return moves
-
-def generate_legal_bug_moves(board, player_num):
-	assert board.in_sync() # Boards need to be in sync
-	b1 = generate_legal_zh_moves(board.boards[0])
-	b2 = generate_legal_zh_moves(board.boards[1])	
-
-	return [(b1[i], b2[j]) for i in range(len(b1)) for j in range(len(b2))]
 
 def best_move(board, depth):
 	alpha = -1000000
@@ -71,10 +67,8 @@ def best_move(board, depth):
 	best_move = None
 	best_move_score = -100000
 
-	for move in generate_legal_bug_moves(board, 0):
+	for move in generate_legal_zh_moves(board):
 		# print(move)
-		new_board = board.deepcopy()
-
 		board.push(move)
 		nodes = {0:0}
 		score = perform_tree_search_(board, depth, board.turn == chess.WHITE, alpha, beta, tp_table, nodes)
@@ -140,13 +134,6 @@ def perform_tree_search_(board, depth, isMaximizing, alpha, beta, tp_table, node
 		return bestValue
 
 
+zh_board = chess.variant.CrazyhouseBoard()
 
-def evaluate_(board):
-	# We assume that the team is of White P1 Black P2 vs Black P1 White P2
-	return evaluate_board(board.boards[0], chess.WHITE) + evaluate_board(board.boards[1], chess.BLACK) - \
-			 evaluate_board(board.boards[0], chess.BLACK) - evaluate_board(board.boards[1], chess.WHITE)
-
-board = bug.BughouseBoard()
-board.move(0, chess.Move.from_uci("e2e4"))
-
-assert board.in_sync()
+print(best_move(zh_board, 7))

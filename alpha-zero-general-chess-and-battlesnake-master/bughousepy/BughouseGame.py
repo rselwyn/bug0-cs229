@@ -1,6 +1,6 @@
 import chess
 import chess.variant
-import BughouseBoard
+from .BughouseBoard import BughouseBoard
 import numpy as np
 
 from Game import Game
@@ -28,10 +28,8 @@ class BughouseGame(Game):
 
     def __init__(self):
         super().__init__()
-        self.all_possible_moves = []
-
         # TODO move to a location to be static
-        # self.all_possible_moves = create_uci_labels()
+        self.all_possible_moves = np.array(create_uci_labels())
         # self.winner = None  # type: Winner
         # self.resigned = False
         # self.result = None
@@ -45,7 +43,6 @@ class BughouseGame(Game):
         # create input layers with fresh board
         # return create_input_planes(self.board.fen())
         board = BughouseBoard()
-        self.all_possible_moves = [move.uci() for move in board.first_board.legal_moves]
         return board
 
     def getBoardSize(self):
@@ -53,7 +50,7 @@ class BughouseGame(Game):
         Returns:
             (x,y): a tuple of board dimensions
         """
-        return (59, 8, 8)
+        return (60, 8, 8)
 
     def getActionSize(self):
         """
@@ -76,16 +73,24 @@ class BughouseGame(Game):
         # TODO remove assert not required part for speed
         assert libPlayerToBughousePlayer(board.turn) == player
         move = self.all_possible_moves[action]
-        if not board.turn:  # black move from CanonicalForm
-            move = str(mirror_action(chess.Move.from_uci(move)))
+        # if not board.turn:  # black move from CanonicalForm
+        #     move = str(mirror_action(chess.Move.from_uci(move)))
 
-        if move not in getAllowedMovesFromBoard(board): # must be a pawn promotion
-            # print(board)
-            # print(move, " is not valid - ",self.all_possible_moves[action])
-            move=move+self.all_possible_moves[action][-1:]
-            # print("moveupdated:",move)
-        board = board.copy()
-        board.push(chess.Move.from_uci(move))
+        # if move not in getAllowedMovesFromBoard(board): # must be a pawn promotion
+        #     # print(board)
+        #     # print(move, " is not valid - ",self.all_possible_moves[action])
+        #     move=move+self.all_possible_moves[action][-1:]
+        #     # print("moveupdated:",move)
+        # board = board.copy()
+        
+        if board.get_active_board().turn == chess.BLACK:
+            board = board.mirror()
+            board.move(chess.Move.from_uci(move))
+            board = board.mirror()
+        
+        else:
+            board.move(chess.Move.from_uci(move))
+
         return (board, -player)
 
     def getValidMoves(self, board, player):
@@ -100,12 +105,20 @@ class BughouseGame(Game):
                         0 for invalid moves
         """
         # TODO remove assert not required part for speed
-        assert libPlayerToBughousePlayer(board.turn) == player
+        # assert libPlayerToBughousePlayer(board.turn) == player
+
+        if board.get_active_board().turn == chess.BLACK:
+            board = board.mirror()
+        
         current_allowed_moves = np.array(getAllowedMovesFromBoard(board))
         # TODO find a better way
-        validMoves = np.isin(np.array(self.all_possible_moves), current_allowed_moves).astype(int)
+        validMoves = np.isin(self.all_possible_moves, current_allowed_moves, assume_unique=True).astype(int)
 
-        assert np.sum(validMoves) == len(current_allowed_moves)
+        if np.sum(validMoves) != len(current_allowed_moves):
+            print(current_allowed_moves)
+            print([x for x in current_allowed_moves if x in self.all_possible_moves])
+            assert False
+        
         return validMoves
 
     def getGameEnded(self, board, player):
@@ -147,16 +160,18 @@ class BughouseGame(Game):
                             the colors and return the board.
         """
         # TODO remove assert not required part for speed
+        # print("Active board:", int(board.active_board))
+        # print("Active board turn:", "White" if board.get_active_board().turn else "Black")
+        # print("Game turn:", "Player 1" if board.turn else "Player -1")
+        # print("Player:", int(player))
+        assert libPlayerToBughousePlayer(board.turn) == player
 
-        if board.active_board == BughouseBoard.FIRST_BOARD:
-            assert libPlayerToBughousePlayer(board.turn) == player
-        elif board.active_board == BughouseBoard.SECOND_BOARD:
-            assert libPlayerToBughousePlayer(not(board.turn)) == player
+        # if player == 1:
+        #     return board
+        # else:
+        #     return board.mirror()
 
-        if player == 1:
-            return board
-        else:
-            return board.mirror()
+        return board
 
     def getSymmetries(self, board, pi):
         """
@@ -191,7 +206,7 @@ class BughouseGame(Game):
 
     @staticmethod
     def display(board):
-        print(board)
+        print(board.visualize())
 
     def toArray(self, board):
         # fen = board.fen()
@@ -199,12 +214,12 @@ class BughouseGame(Game):
         return all_input_planes(board)
 
 
-def mirror_action(action):
-    return chess.Move(chess.square_mirror(action.from_square), chess.square_mirror(action.to_square))
+# def mirror_action(action):
+#     return chess.Move(chess.square_mirror(action.from_square), chess.square_mirror(action.to_square))
 
 
 def getAllowedMovesFromBoard(board):
-    return [move.uci() for move in board.boards[board.active_board].legal_moves]
+    return [move.uci() for move in board.get_active_board().legal_moves]
 
 
 # reverse the fen representation as if black is white and vice-versa
@@ -226,6 +241,13 @@ def getAllowedMovesFromBoard(board):
 
 def all_input_planes(board):
 
+    player = np.full((1, 8, 8), board.turn) # (1, 8, 8)
+
+    if board.get_active_board().turn == chess.BLACK:
+        board = board.mirror()
+
+    active_board = np.full((1, 8, 8), board.active_board) # (1, 8, 8)
+
     b1_history = to_planes(board.first_board) # (12, 8, 8)
     b2_history = to_planes(board.second_board) # (12, 8, 8)
 
@@ -235,11 +257,9 @@ def all_input_planes(board):
     b1_aux = aux_planes(board.first_board) # (7, 8, 8)
     b2_aux = aux_planes(board.second_board) # (7, 8, 8)
 
-    active_board = np.full((1, 8, 8), board.active_board) # (1, 8, 8)
+    ret = np.vstack((player, active_board, b1_history, b2_history, b1_prisoners, b2_prisoners, b1_aux, b2_aux))
 
-    ret = np.vstack((b1_history, b2_history, b1_prisoners, b2_prisoners, b1_aux, b2_aux, active_board))
-
-    assert ret.shape == (59, 8, 8)
+    assert ret.shape == (60, 8, 8)
     return ret
 
 
@@ -320,7 +340,7 @@ def prisoners(board):
         for j, p in enumerate((chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT, chess.PAWN)):
             counts[5*i+j] = pocket.count(p)
 
-    return np.broadcast_to(counts[...,None,None], (1, 8, 8))
+    return np.broadcast_to(counts[...,None,None], (10, 8, 8))
 
 # def replace_tags_board(board_san):
 #     board_san = board_san.split(" ")[0]
@@ -350,42 +370,52 @@ def alg_to_coord(alg):
 #     return "".join([swapcase(a) for a in aa])
 
 
-# def create_uci_labels():
-#     """
-#     Creates the labels for the universal chess interface into an array and returns them
-#     :return:
-#     """
-#     labels_array = []
-#     letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-#     numbers = ['1', '2', '3', '4', '5', '6', '7', '8']
-#     promoted_to = ['q', 'r', 'b', 'n']
+def create_uci_labels():
+    """
+    Creates the labels for the universal chess interface into an array and returns them
+    :return:
+    """
+    labels_array = []
+    letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+    numbers = ['1', '2', '3', '4', '5', '6', '7', '8']
+    promoted_to = ['q', 'r', 'b', 'n']
 
-#     for l1 in range(8):
-#         for n1 in range(8):
-#             destinations = [(t, n1) for t in range(8)] + \
-#                            [(l1, t) for t in range(8)] + \
-#                            [(l1 + t, n1 + t) for t in range(-7, 8)] + \
-#                            [(l1 + t, n1 - t) for t in range(-7, 8)] + \
-#                            [(l1 + a, n1 + b) for (a, b) in
-#                             [(-2, -1), (-1, -2), (-2, 1), (1, -2), (2, -1), (-1, 2), (2, 1), (1, 2)]]
-#             for (l2, n2) in destinations:
-#                 if (l1, n1) != (l2, n2) and l2 in range(8) and n2 in range(8):
-#                     move = letters[l1] + numbers[n1] + letters[l2] + numbers[n2]
-#                     labels_array.append(move)
-#     for l1 in range(8):
-#         l = letters[l1]
-#         for p in promoted_to:
-#             labels_array.append(l + '2' + l + '1' + p)
-#             labels_array.append(l + '7' + l + '8' + p)
-#             if l1 > 0:
-#                 l_l = letters[l1 - 1]
-#                 labels_array.append(l + '2' + l_l + '1' + p)
-#                 labels_array.append(l + '7' + l_l + '8' + p)
-#             if l1 < 7:
-#                 l_r = letters[l1 + 1]
-#                 labels_array.append(l + '2' + l_r + '1' + p)
-#                 labels_array.append(l + '7' + l_r + '8' + p)
-#     return labels_array
+    for l1 in range(8):
+        for n1 in range(8):
+            destinations = [(t, n1) for t in range(8)] + \
+                           [(l1, t) for t in range(8)] + \
+                           [(l1 + t, n1 + t) for t in range(-7, 8)] + \
+                           [(l1 + t, n1 - t) for t in range(-7, 8)] + \
+                           [(l1 + a, n1 + b) for (a, b) in
+                            [(-2, -1), (-1, -2), (-2, 1), (1, -2), (2, -1), (-1, 2), (2, 1), (1, 2)]]
+            for (l2, n2) in destinations:
+                if (l1, n1) != (l2, n2) and l2 in range(8) and n2 in range(8):
+                    move = letters[l1] + numbers[n1] + letters[l2] + numbers[n2]
+                    labels_array.append(move)
+    for l1 in range(8):
+        l = letters[l1]
+        for p in promoted_to:
+            labels_array.append(l + '2' + l + '1' + p)
+            labels_array.append(l + '7' + l + '8' + p)
+            if l1 > 0:
+                l_l = letters[l1 - 1]
+                labels_array.append(l + '2' + l_l + '1' + p)
+                labels_array.append(l + '7' + l_l + '8' + p)
+            if l1 < 7:
+                l_r = letters[l1 + 1]
+                labels_array.append(l + '2' + l_r + '1' + p)
+                labels_array.append(l + '7' + l_r + '8' + p)
+
+    # Allowed drops
+    for l in letters:
+        for i, n in enumerate(numbers):
+            for p in ('Q', 'R', 'B', 'N'):
+                labels_array.append(f'{p}@{l}{n}')
+            if i > 0 and i < 7:
+                # Pawns cannot be dropped on 1st or 8th rank
+                labels_array.append(f'P@{l}{n}')
+        
+    return labels_array
 
 
 def libPlayerToBughousePlayer(turn):

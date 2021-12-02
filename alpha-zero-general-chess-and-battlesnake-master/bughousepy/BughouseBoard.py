@@ -7,13 +7,20 @@ import re
 from enum import Enum
 from chess.variant import CrazyhouseBoard, CrazyhousePocket
 import chess
+import numpy as np
 
 FIRST_BOARD = 0
 SECOND_BOARD = 1
 
 class BughouseBoard(object):
 
-    def __init__(self, first_board=CrazyhouseBoard(), second_board=CrazyhouseBoard(), active_board=FIRST_BOARD):
+    def __init__(self, first_board=None, second_board=None, active_board=FIRST_BOARD):
+
+        if first_board is None:
+            first_board = CrazyhouseBoard()
+
+        if second_board is None:
+            second_board = CrazyhouseBoard()
 
         self.boards = {
             FIRST_BOARD: first_board,
@@ -41,7 +48,19 @@ class BughouseBoard(object):
         board = self.boards[board_num]
         other_board = self.boards[other_board_num]
 
+        # print(board)
+        # print("Turn:", board.turn)
+        # print("White:")
+        # print(bitboard_to_array(board.occupied_co[chess.WHITE]))
+        # print("Black:")
+        # print(bitboard_to_array(board.occupied_co[chess.BLACK]))
+        # touched = chess.BB_SQUARES[move.from_square] ^ chess.BB_SQUARES[move.to_square]
+        # print("Touched:")
+        # print(bitboard_to_array(touched))
+        # print("Capture:")
+        # print(bitboard_to_array(touched & board.occupied_co[not board.turn]))
         is_capture = board.is_capture(move)
+        # print("Is Capture:", is_capture)
         #is_castling = board.is_castling(move)
         capture_piece_type = None
         #print(board_num, move.from_square, move.to_square)#, is_castling)
@@ -73,13 +92,27 @@ class BughouseBoard(object):
         else:
             board.push(move)
         
-        self.active_board = other_board_num
+        if self.first_board.turn != self.second_board.turn:
+            self.active_board = other_board_num
 
         #print("after", board.fen())
+
+    def get_active_board(self):
+        return self.boards[self.active_board]
+
+    def copy(self):
+        return BughouseBoard(self.first_board.copy(), self.second_board.copy())
 
     def mirror(self):
         # Returns a mirrored version of the Bughouse board where the board numbers and colors are swapped
         return BughouseBoard(self.second_board.mirror(), self.first_board.mirror(), not(self.active_board))
+
+    @property
+    def turn(self):
+        if self.active_board == FIRST_BOARD:
+            return self.first_board.turn
+        else:
+            return not(self.second_board.turn)
 
     def get_fens(self):
         first_board = self.boards[FIRST_BOARD]
@@ -95,8 +128,21 @@ class BughouseBoard(object):
         second_board = str(self.boards[SECOND_BOARD]).split('\n')
         output = ""
         for i in range(8):
-            output += first_board[i] + "    " + second_board[i] + '\n'
+            output += first_board[i] + "    " + second_board[7-i] + '\n'
         return output[:-1]
 
     def parse_san(self, board_num, san):
         return self.boards[board_num].parse_san(san)
+
+def bitboards_to_array(bb: np.ndarray) -> np.ndarray:
+    bb = np.asarray(bb, dtype=np.uint64)[:, np.newaxis]
+    s = 8 * np.arange(7, -1, -1, dtype=np.uint64)
+    b = (bb >> s).astype(np.uint8)
+    b = np.unpackbits(b, bitorder="little")
+    return b.reshape(-1, 8, 8)
+
+def bitboard_to_array(bb: int) -> np.ndarray:
+    s = 8 * np.arange(7, -1, -1, dtype=np.uint64)
+    b = (bb >> s).astype(np.uint8)
+    b = np.unpackbits(b, bitorder="little")
+    return b.reshape(8, 8)

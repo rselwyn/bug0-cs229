@@ -2,8 +2,8 @@ import sys
 import threading
 
 from Coach import Coach
-from crazyhousepy.CrazyhouseGame import CrazyhouseGame as Game
-from crazyhousepy.pytorch.NNet import NNetWrapper as nn
+from chesspy.ChessGame import ChessGame as Game
+from chesspy.pytorch.NNet import NNetWrapper as nn
 from utils import *
 
 
@@ -36,7 +36,6 @@ if __name__ == "__main__":
         print("Load trainExamples from file")
         c.loadTrainExamples()
     sys.setrecursionlimit(100000)
-    threading.stack_size(200000000)
     thread = threading.Thread(target=c.learn())
     thread.start()
     # c.learn()

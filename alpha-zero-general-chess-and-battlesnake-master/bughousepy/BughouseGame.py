@@ -76,6 +76,7 @@ class BughouseGame(Game):
             board = board.mirror()
         
         else:
+            board = board.copy()
             board.move(chess.Move.from_uci(move))
 
         return (board, -player)
@@ -150,7 +151,7 @@ class BughouseGame(Game):
         """
         # TODO remove assert not required part for speed
         # assert libPlayerToBughousePlayer(board.turn) == player
-        
+
         # print("Active board:", int(board.active_board))
         # print("Active board turn:", "White" if board.get_active_board().turn else "Black")
         # print("Game turn:", "Player 1" if board.turn else "Player -1")
@@ -187,11 +188,14 @@ class BughouseGame(Game):
         # parts = board.fen().split(' ')
         # return parts[0] + ' ' + parts[2] + ' ' + parts[3]
 
-        return board.first_board.fen() + board.second_board.fen() + " " + str(int(board.active_board))
+        return board.string_rep()
 
     @staticmethod
-    def display(board):
-        print(board.visualize())
+    def display(board, visualize=True, string_rep=False):
+        if visualize:
+            print(board.visualize())
+        if string_rep:
+            print(board.string_rep())
 
     def toArray(self, board):
         # fen = board.fen()
@@ -259,7 +263,7 @@ def aux_planes(board):
 
     foo = fen.split(' ')
 
-    promoted = bitboard_to_array(board.promoted())
+    promoted = bitboard_to_array(board.promoted)
 
     en_passant = np.zeros((8, 8), dtype=np.float32)
     if foo[3] != '-':

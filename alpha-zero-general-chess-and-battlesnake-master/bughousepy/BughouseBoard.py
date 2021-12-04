@@ -14,7 +14,7 @@ SECOND_BOARD = 1
 
 class BughouseBoard(object):
 
-    def __init__(self, first_board=None, second_board=None, active_board=FIRST_BOARD):
+    def __init__(self, first_board=None, second_board=None):
 
         if first_board is None:
             first_board = CrazyhouseBoard()
@@ -30,7 +30,13 @@ class BughouseBoard(object):
         self.first_board = first_board
         self.second_board = second_board
 
-        self.active_board = active_board
+        self.active_board = FIRST_BOARD
+
+        # Tracking half moves since board.mirror() clears the move stack
+        self.half_move_counts = {
+            FIRST_BOARD: 0,
+            SECOND_BOARD: 0,
+        }
 
     def reset(self):
         first_board = self.boards[FIRST_BOARD]
@@ -66,12 +72,12 @@ class BughouseBoard(object):
         #print(board_num, move.from_square, move.to_square)#, is_castling)
         #print("before", board.fen())
         #print(is_capture, move.drop)
-        first_white_pocket = self.boards[FIRST_BOARD].pockets[chess.WHITE]
-        first_black_pocket = self.boards[FIRST_BOARD].pockets[chess.BLACK]
-        second_white_pocket = self.boards[SECOND_BOARD].pockets[chess.WHITE]
-        second_black_pocket = self.boards[SECOND_BOARD].pockets[chess.BLACK]
-        pockets = [first_white_pocket, first_black_pocket, second_white_pocket, second_black_pocket]
-        pockets = [str(pocket) for pocket in pockets]
+        # first_white_pocket = self.boards[FIRST_BOARD].pockets[chess.WHITE]
+        # first_black_pocket = self.boards[FIRST_BOARD].pockets[chess.BLACK]
+        # second_white_pocket = self.boards[SECOND_BOARD].pockets[chess.WHITE]
+        # second_black_pocket = self.boards[SECOND_BOARD].pockets[chess.BLACK]
+        # pockets = [first_white_pocket, first_black_pocket, second_white_pocket, second_black_pocket]
+        # pockets = [str(pocket) for pocket in pockets]
         #print(pockets)
         if is_capture:
             if move.drop != None:
@@ -91,6 +97,8 @@ class BughouseBoard(object):
                 other_board.pockets[board.turn].add(capture_piece_type)#and do bughouse pocket rules
         else:
             board.push(move)
+
+        self.half_move_counts[board_num] += 1
         
         if self.first_board.turn != self.second_board.turn:
             self.active_board = other_board_num
@@ -101,11 +109,23 @@ class BughouseBoard(object):
         return self.boards[self.active_board]
 
     def copy(self):
-        return BughouseBoard(self.first_board.copy(), self.second_board.copy())
+        
+        new_board = BughouseBoard(self.first_board.copy(), self.second_board.copy())
+        new_board.active_board = self.active_board
+        new_board.half_move_counts[FIRST_BOARD] = self.half_move_counts[FIRST_BOARD]
+        new_board.half_move_counts[SECOND_BOARD] = self.half_move_counts[SECOND_BOARD]
+
+        return new_board
 
     def mirror(self):
         # Returns a mirrored version of the Bughouse board where the board numbers and colors are swapped
-        return BughouseBoard(self.second_board.mirror(), self.first_board.mirror(), not(self.active_board))
+
+        new_board = BughouseBoard(self.second_board.mirror(), self.first_board.mirror())
+        new_board.active_board = not(self.active_board)
+        new_board.half_move_counts[FIRST_BOARD] = self.half_move_counts[SECOND_BOARD]
+        new_board.half_move_counts[SECOND_BOARD] = self.half_move_counts[FIRST_BOARD]
+
+        return new_board
 
     @property
     def turn(self):
@@ -114,10 +134,12 @@ class BughouseBoard(object):
         else:
             return not(self.second_board.turn)
 
-    def get_fens(self):
+    def string_rep(self):
         first_board = self.boards[FIRST_BOARD]
         second_board = self.boards[SECOND_BOARD]
-        return (first_board.fen(), second_board.fen())
+        return  ' '.join(first_board.fen().split(' ')[:-1]) + f' {self.half_move_counts[FIRST_BOARD]//2} ' \
+            + ' '.join(second_board.fen().split(' ')[:-1]) + f' {self.half_move_counts[SECOND_BOARD]//2} ' \
+                + str(int(self.active_board))
 
     def in_sync(self):
         # We assume that the bot is playing black on board 1 and white on board 2, and that the first player has made their move

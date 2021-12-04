@@ -19,7 +19,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 
-from .BughouseNNet import CrazyhouseNNet as onnet
+from .BughouseNNet import BughouseNNet as onnet
 
 args = dotdict({
     'lr': 0.0005,

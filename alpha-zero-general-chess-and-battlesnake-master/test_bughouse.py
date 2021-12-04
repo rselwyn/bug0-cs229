@@ -7,6 +7,7 @@
 from othello.OthelloPlayers import *
 from bughousepy.BughouseGame import BughouseGame
 from bughousepy.pytorch.NNet import NNetWrapper as BughousePytorchNNet
+from bughousepy.tensorflow.NNet import NNetWrapper as BughouseTensorflowNNet
 
 import torchinfo
 
@@ -34,17 +35,17 @@ game = BughouseGame()
 # Random vs random
 rp = RandomPlayer(game).play
 
-arena = Arena.Arena(rp, rp, game, display=lambda board: game.display(board, visualize=False, string_rep=True))
-profile(lambda: print(arena.playGames(4, verbose=False)))
+# arena = Arena.Arena(rp, rp, game, display=lambda board: game.display(board, visualize=False, string_rep=True))
+# profile(lambda: print(arena.playGames(4, verbose=False)))
 
 # Random vs random-init NN
-# args = dotdict({'numMCTSSims': 2, 'cpuct': 1.0})
-# nnet = BughousePytorchNNet(game)
-# mcts = MCTS(game, nnet, args)
-# n1p = lambda x: np.argmax(mcts.getActionProb(x, temp=0))
+args = dotdict({'numMCTSSims': 2, 'cpuct': 1.0})
+nnet = BughouseTensorflowNNet(game)
+mcts = MCTS(game, nnet, args)
+n1p = lambda x: np.argmax(mcts.getActionProb(x, temp=0))
 
-# arena = Arena.Arena(n1p, rp, game, display=lambda board: game.display(board, visualize=False, string_rep=True))
-# profile(lambda: print(arena.playGames(2, verbose=False)))
+arena = Arena.Arena(n1p, rp, game, display=lambda board: game.display(board, visualize=False, string_rep=True))
+profile(lambda: print(arena.playGames(2, verbose=False)))
 
 # board = game.toArray(game.getInitBoard())  
 # print(timeit.timeit(lambda: nnet.predict(board),number=10))

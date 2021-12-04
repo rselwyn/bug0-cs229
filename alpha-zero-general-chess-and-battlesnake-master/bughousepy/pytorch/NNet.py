@@ -1,25 +1,19 @@
-import argparse
 import os
-import shutil
-import time
-import random
-import numpy as np
-import math
 import sys
+import time
+
+import numpy as np
+from tqdm import tqdm
 
 sys.path.append('../../')
 from utils import *
-from pytorch_classification.utils import Bar, AverageMeter
 from NeuralNet import NeuralNet
 
-import argparse
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from torchvision import datasets, transforms
 
-from .BughouseNNet import BughouseNNet as onnet
+from .BughouseNNet import BughouseNNet
+from ..BughouseNNRepresentation import board_to_input
 
 args = dotdict({
     'lr': 0.0005,
@@ -33,7 +27,7 @@ args = dotdict({
 
 class NNetWrapper(NeuralNet):
     def __init__(self, game):
-        self.nnet = onnet(game, args)
+        self.nnet = BughouseNNet(game, args)
         self.board_x, self.board_y, self.board_z = game.getBoardSize()
         self.action_size = game.getActionSize()
 
@@ -49,28 +43,22 @@ class NNetWrapper(NeuralNet):
         for epoch in range(args.epochs):
             print('EPOCH ::: ' + str(epoch + 1))
             self.nnet.train()
-            data_time = AverageMeter()
-            batch_time = AverageMeter()
             pi_losses = AverageMeter()
             v_losses = AverageMeter()
-            end = time.time()
 
-            bar = Bar('Training Net', max=int(len(examples) / args.batch_size))
-            batch_idx = 0
+            batch_count = int(len(examples) / args.batch_size)
 
-            while batch_idx < int(len(examples) / args.batch_size):
+            t = tqdm(range(batch_count), desc='Training Net')
+            for _ in t:
                 sample_ids = np.random.randint(len(examples), size=args.batch_size)
                 boards, pis, vs = list(zip(*[examples[i] for i in sample_ids]))
-                boards = torch.FloatTensor(np.array(boards).astype(np.float64))
+                boards = torch.FloatTensor(np.array([board_to_input(b) for b in boards]).astype(np.float64))
                 target_pis = torch.FloatTensor(np.array(pis))
                 target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
 
                 # predict
                 if args.cuda:
                     boards, target_pis, target_vs = boards.contiguous().cuda(), target_pis.contiguous().cuda(), target_vs.contiguous().cuda()
-
-                # measure data loading time
-                data_time.update(time.time() - end)
 
                 # compute output
                 out_pi, out_v = self.nnet(boards)
@@ -81,40 +69,22 @@ class NNetWrapper(NeuralNet):
                 # record loss
                 pi_losses.update(l_pi.item(), boards.size(0))
                 v_losses.update(l_v.item(), boards.size(0))
+                t.set_postfix(Loss_pi=pi_losses, Loss_v=v_losses)
 
                 # compute gradient and do SGD step
                 optimizer.zero_grad()
                 total_loss.backward()
                 optimizer.step()
 
-                # measure elapsed time
-                batch_time.update(time.time() - end)
-                end = time.time()
-                batch_idx += 1
-
-                # plot progress
-                bar.suffix = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss_pi: {lpi:.4f} | Loss_v: {lv:.3f}'.format(
-                    batch=batch_idx,
-                    size=int(len(examples) / args.batch_size),
-                    data=data_time.avg,
-                    bt=batch_time.avg,
-                    total=bar.elapsed_td,
-                    eta=bar.eta_td,
-                    lpi=pi_losses.avg,
-                    lv=v_losses.avg,
-                )
-                bar.next()
-            bar.finish()
-
     def predict(self, board):
         """
-        board: np array with board (18,8,8)
+        board: (ChessBoard) chess board
         """
         # timing
         start = time.time()
 
         # preparing input
-        board = torch.FloatTensor(board.astype(np.float64))
+        board = torch.FloatTensor(board_to_input(board).astype(np.float64))
         if args.cuda: board = board.contiguous().cuda()
         board = board.view(1, self.board_x, self.board_y, self.board_z)
         self.nnet.eval()
@@ -145,7 +115,7 @@ class NNetWrapper(NeuralNet):
         # https://github.com/pytorch/examples/blob/master/imagenet/main.py#L98
         filepath = os.path.join(folder, filename)
         if not os.path.exists(filepath):
-            raise ValueError("No model in path {}".format(filepath))
+            raise ("No model in path {}".format(filepath))
         map_location = None if args.cuda else 'cpu'
         checkpoint = torch.load(filepath, map_location=map_location)
         self.nnet.load_state_dict(checkpoint['state_dict'])

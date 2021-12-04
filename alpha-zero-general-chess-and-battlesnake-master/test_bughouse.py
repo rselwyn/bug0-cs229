@@ -8,6 +8,8 @@ from othello.OthelloPlayers import *
 from bughousepy.BughouseGame import BughouseGame
 from bughousepy.pytorch.NNet import NNetWrapper as BughousePytorchNNet
 
+import torchinfo
+
 import Arena
 from MCTS import MCTS
 
@@ -16,6 +18,7 @@ from utils import *
 import numpy as np
 np.random.seed(0)
 
+import timeit
 import cProfile, pstats
 pr = cProfile.Profile()
 def profile(f):
@@ -36,8 +39,14 @@ rp = RandomPlayer(game).play
 
 # Random vs random-init NN
 args = dotdict({'numMCTSSims': 2, 'cpuct': 1.0})
-mcts = MCTS(game, BughousePytorchNNet(game), args)
-n1p = lambda x: np.argmax(mcts.getActionProb(x, temp=0))
+nnet = BughousePytorchNNet(game)
+# mcts = MCTS(game, nnet, args)
+# n1p = lambda x: np.argmax(mcts.getActionProb(x, temp=0))
 
-arena = Arena.Arena(n1p, rp, game, display=lambda board: game.display(board, visualize=False, string_rep=True))
-profile(lambda: print(arena.playGames(2, verbose=False)))
+# arena = Arena.Arena(n1p, rp, game, display=lambda board: game.display(board, visualize=False, string_rep=True))
+# profile(lambda: print(arena.playGames(2, verbose=False)))
+
+# board = game.toArray(game.getInitBoard())  
+# print(timeit.timeit(lambda: nnet.predict(board),number=10))
+
+torchinfo.summary(nnet.nnet, input_size=(64, 60, 8, 8))

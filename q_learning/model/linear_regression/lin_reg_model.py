@@ -39,3 +39,22 @@ score = reg.score(states, values)
 rmse = np.sqrt(np.mean((preds - values) ** 2))
 print(f"Model: score = {score}, RMSE = {rmse}")
 
+print("PCA states")
+svd = TruncatedSVD(n_components=512)
+states = svd.fit_transform(states)
+print(f"PCA explaination: {svd.explained_variance_ratio_}")
+
+preds = reg.predict(states)
+print(f"Predictions: min = {np.min(preds)}, max = {np.max(preds)}, mean = {np.mean(preds)}, mean diff from mean: {np.mean(preds - np.mean(preds))}")
+score = reg.score(states, values)
+rmse = np.sqrt(np.mean((preds - values) ** 2))
+print(f"Model: score = {score}, RMSE = {rmse}")
+
+print("Fitting ElasticNet")
+reg = ElasticNet().fit(states, values)
+
+preds = reg.predict(states)
+print(f"Predictions: min = {np.min(preds)}, max = {np.max(preds)}, mean = {np.mean(preds)}, mean diff from mean: {np.mean(preds - np.mean(preds))}")
+score = reg.score(states, values)
+rmse = np.sqrt(np.mean((preds - values) ** 2))
+print(f"Model: score = {score}, RMSE = {rmse}")

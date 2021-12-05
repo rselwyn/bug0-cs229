@@ -14,6 +14,14 @@ filename = "export2018"
 file = path.join(DATA_DIR, "bpgn", f"{filename}.bpgn")
 filepath = path.join(DATA_DIR, "pk", f"{filename}.pk")
 
+
+def print_insights(reg, X, y, label=""):
+    preds = reg.predict(X)
+    print(f"{label} predictions: min = {np.min(preds)}, max = {np.max(preds)}, mean = {np.mean(preds)}, mean diff from mean: {np.mean(preds - np.mean(preds))}")
+    score = reg.score(X, y)
+    rmse = np.sqrt(np.mean((preds - y) ** 2))
+    print(f"{label}: score = {score}, RMSE = {rmse}")
+
 print("Loading dataset")
 with open(filepath, 'rb') as f:
     data_dict = pickle.load(f)
@@ -30,67 +38,29 @@ y_train, y_test = values[training_idx], values[test_idx]
 print("Fitting linear regression")
 reg = LinearRegression().fit(X_train, y_train)
 
-preds = reg.predict(X_train)
-print(f"Train predictions: min = {np.min(preds)}, max = {np.max(preds)}, mean = {np.mean(preds)}, mean diff from mean: {np.mean(preds - np.mean(preds))}")
-score = reg.score(X_train, y_train)
-rmse = np.sqrt(np.mean((preds - y_train) ** 2))
-print(f"Train: score = {score}, RMSE = {rmse}")
-
-preds = reg.predict(X_test)
-print(f"Test predictions: min = {np.min(preds)}, max = {np.max(preds)}, mean = {np.mean(preds)}, mean diff from mean: {np.mean(preds - np.mean(preds))}")
-score = reg.score(X_test, y_test)
-rmse = np.sqrt(np.mean((preds - y_test) ** 2))
-print(f"Test: score = {score}, RMSE = {rmse}")
-
+print_insights(reg, X_train, y_train, "Train")
+print_insights(reg, X_test, y_test, "Test")
 
 print("Fitting ElasticNet")
 reg = ElasticNet().fit(X_train, y_train)
 
-preds = reg.predict(X_train)
-print(f"Train predictions: min = {np.min(preds)}, max = {np.max(preds)}, mean = {np.mean(preds)}, mean diff from mean: {np.mean(preds - np.mean(preds))}")
-score = reg.score(X_train, y_train)
-rmse = np.sqrt(np.mean((preds - y_train) ** 2))
-print(f"Train: score = {score}, RMSE = {rmse}")
-
-preds = reg.predict(X_test)
-print(f"Test predictions: min = {np.min(preds)}, max = {np.max(preds)}, mean = {np.mean(preds)}, mean diff from mean: {np.mean(preds - np.mean(preds))}")
-score = reg.score(X_test, y_test)
-rmse = np.sqrt(np.mean((preds - y_test) ** 2))
-print(f"Test: score = {score}, RMSE = {rmse}")
+print_insights(reg, X_train, y_train, "Train")
+print_insights(reg, X_test, y_test, "Test")
 
 print("PCA states")
 svd = TruncatedSVD(n_components=512)
-X_train = svd.fit_transform(X_train)
-X_test = svd.transform(X_test)
+X_train_PCA = svd.fit_transform(X_train)
+X_test_PCA = svd.transform(X_test)
 print(f"PCA explaination: {np.sum(svd.explained_variance_ratio_)}")
 
 print("Fitting linear regression")
-reg = LinearRegression().fit(X_train, y_train)
+reg = LinearRegression().fit(X_train_PCA, y_train)
 
-preds = reg.predict(X_train)
-print(f"Train predictions: min = {np.min(preds)}, max = {np.max(preds)}, mean = {np.mean(preds)}, mean diff from mean: {np.mean(preds - np.mean(preds))}")
-score = reg.score(X_train, y_train)
-rmse = np.sqrt(np.mean((preds - y_train) ** 2))
-print(f"Train: score = {score}, RMSE = {rmse}")
-
-preds = reg.predict(X_test)
-print(f"Test predictions: min = {np.min(preds)}, max = {np.max(preds)}, mean = {np.mean(preds)}, mean diff from mean: {np.mean(preds - np.mean(preds))}")
-score = reg.score(X_test, y_test)
-rmse = np.sqrt(np.mean((preds - y_test) ** 2))
-print(f"Test: score = {score}, RMSE = {rmse}")
-
+print_insights(reg, X_train_PCA, y_train, "Train")
+print_insights(reg, X_test_PCA, y_test, "Test")
 
 print("Fitting ElasticNet")
-reg = ElasticNet().fit(X_train, y_train)
+reg = ElasticNet().fit(X_train_PCA, y_train)
 
-preds = reg.predict(X_train)
-print(f"Train predictions: min = {np.min(preds)}, max = {np.max(preds)}, mean = {np.mean(preds)}, mean diff from mean: {np.mean(preds - np.mean(preds))}")
-score = reg.score(X_train, y_train)
-rmse = np.sqrt(np.mean((preds - y_train) ** 2))
-print(f"Train: score = {score}, RMSE = {rmse}")
-
-preds = reg.predict(X_test)
-print(f"Test predictions: min = {np.min(preds)}, max = {np.max(preds)}, mean = {np.mean(preds)}, mean diff from mean: {np.mean(preds - np.mean(preds))}")
-score = reg.score(X_test, y_test)
-rmse = np.sqrt(np.mean((preds - y_test) ** 2))
-print(f"Test: score = {score}, RMSE = {rmse}")
+print_insights(reg, X_train_PCA, y_train, "Train")
+print_insights(reg, X_test_PCA, y_test, "Test")

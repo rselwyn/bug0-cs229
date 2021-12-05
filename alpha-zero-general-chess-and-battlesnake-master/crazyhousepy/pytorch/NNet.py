@@ -8,7 +8,7 @@ import math
 import sys
 
 sys.path.append('../../')
-from utils import *
+from util import *
 from pytorch_classification.utils import Bar, AverageMeter
 from NeuralNet import NeuralNet
 

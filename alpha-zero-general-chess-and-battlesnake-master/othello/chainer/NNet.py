@@ -13,7 +13,7 @@ from chainer.iterators import SerialIterator
 from chainer.training import extensions
 
 sys.path.append('../../')
-from utils import dotdict
+from util import dotdict
 from NeuralNet import NeuralNet
 from .OthelloNNet import OthelloNNet as onnet
 

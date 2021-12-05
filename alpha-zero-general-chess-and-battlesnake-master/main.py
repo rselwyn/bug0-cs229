@@ -4,7 +4,7 @@ import threading
 from Coach import Coach
 from chesspy.ChessGame import ChessGame as Game
 from chesspy.pytorch.NNet import NNetWrapper as nn
-from utils import *
+from util import *
 
 
 args = dotdict({

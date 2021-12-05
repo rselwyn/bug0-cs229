@@ -13,7 +13,7 @@ import torchinfo
 import Arena
 from MCTS import MCTS
 
-from utils import *
+from util import *
 
 import numpy as np
 np.random.seed(0)

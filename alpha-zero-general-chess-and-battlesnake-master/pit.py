@@ -6,7 +6,7 @@ from chesspy.ChessPlayers import HumanChessPlayer as HumanPlayer, RandomPlayer, 
 from chesspy.pytorch.NNet import NNetWrapper as NNet
 
 import numpy as np
-from utils import *
+from util import *
 
 """
 use this script to play manually with the best temp agent.

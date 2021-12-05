@@ -27,9 +27,6 @@ class BughouseBoard(object):
             SECOND_BOARD: second_board,
         }
 
-        self.first_board = first_board
-        self.second_board = second_board
-
         self.active_board = FIRST_BOARD
 
         # Tracking half moves since board.mirror() clears the move stack
@@ -37,6 +34,14 @@ class BughouseBoard(object):
             FIRST_BOARD: 0,
             SECOND_BOARD: 0,
         }
+
+    @property
+    def first_board(self):
+        return self.boards[FIRST_BOARD]
+    
+    @property
+    def second_board(self):
+        return self.boards[SECOND_BOARD]
 
     def reset(self):
         first_board = self.boards[FIRST_BOARD]
@@ -53,6 +58,7 @@ class BughouseBoard(object):
         other_board_num = not(board_num)
         board = self.boards[board_num]
         other_board = self.boards[other_board_num]
+        orig_turn = board.turn
 
         # print(board)
         # print("Turn:", board.turn)
@@ -94,14 +100,26 @@ class BughouseBoard(object):
                     capture_piece_type = chess.PAWN
                 board.push(move)
                 board.pockets[not(board.turn)].remove(capture_piece_type)#undo crazyhouse pocket rules
-                other_board.pockets[board.turn].add(capture_piece_type)#and do bughouse pocket rules
+                if not check_crazyhouse_draw(other_board):
+                    other_board.pockets[board.turn].add(capture_piece_type)#and do bughouse pocket rules
         else:
             board.push(move)
 
         self.half_move_counts[board_num] += 1
         
-        if self.first_board.turn != self.second_board.turn:
+        # if board.result() == "1/2-1/2" or other_board.result() == "1/2-1/2":
+        #     print("FIRST BOARD:", self.first_board.result())
+        #     print("SECOND BOARD:", self.second_board.result())
+
+        if check_crazyhouse_draw(board) and not check_crazyhouse_draw(other_board):
+            other_board.turn = orig_turn
             self.active_board = other_board_num
+
+        elif self.first_board.turn != self.second_board.turn and not check_crazyhouse_draw(other_board):
+            self.active_board = other_board_num
+
+        # if self.first_board.turn != self.second_board.turn:
+        #     self.active_board = other_board_num
 
         #print("after", board.fen())
 
@@ -134,6 +152,20 @@ class BughouseBoard(object):
         else:
             return not(self.second_board.turn)
 
+    def result(self):
+
+        r1 = self.first_board.result()
+        r2 = self.second_board.result()
+
+        if r1 == "1-0" or r2 == "0-1":
+            return "1-0"
+        elif r1 == "0-1" or r2 == "1-0":
+            return "0-1"
+        elif check_crazyhouse_draw(self.first_board) and check_crazyhouse_draw(self.second_board):
+            return "1/2-1/2"
+        else:
+            return "*"
+
     def string_rep(self):
         first_board = self.boards[FIRST_BOARD]
         second_board = self.boards[SECOND_BOARD]
@@ -155,6 +187,9 @@ class BughouseBoard(object):
 
     def parse_san(self, board_num, san):
         return self.boards[board_num].parse_san(san)
+
+def check_crazyhouse_draw(board: CrazyhouseBoard):
+    return board.result() == "1/2-1/2" or board.halfmove_clock >= 75
 
 def bitboards_to_array(bb: np.ndarray) -> np.ndarray:
     bb = np.asarray(bb, dtype=np.uint64)[:, np.newaxis]

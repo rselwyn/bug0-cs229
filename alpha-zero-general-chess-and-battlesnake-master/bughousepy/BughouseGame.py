@@ -115,14 +115,13 @@ class BughouseGame(Game):
 
         """
 
-        r1 = board.first_board.result()
-        r2 = board.second_board.result()
+        r = board.result()
 
-        if r1 == "1-0" or r2 == "0-1":
+        if r == "1-0":
             return player
-        elif r1 == "0-1" or r2 == "1-0":
+        elif r == "0-1":
             return -player
-        elif r1 == "1/2-1/2" and r2 == "1/2-1/2":
+        elif r == "1/2-1/2":
             return 1e-4  # TODO how small is better?
         else:
             return 0
@@ -183,11 +182,13 @@ class BughouseGame(Game):
         return board.string_rep()
 
     @staticmethod
-    def display(board, visualize=True, string_rep=False):
+    def display(board, visualize=True, string_rep=False, result=False):
         if visualize:
             print(board.visualize())
         if string_rep:
             print(board.string_rep())
+        if result:
+            print(board.first_board.result(), board.second_board.result())
 
 def libPlayerToBughousePlayer(turn):
     return 1 if turn else -1

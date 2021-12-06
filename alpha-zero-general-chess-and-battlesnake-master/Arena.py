@@ -62,7 +62,7 @@ class Arena():
             self.display(board)
         return curPlayer * self.game.getGameEnded(board, curPlayer)
 
-    def playGames(self, num, verbose=False):
+    def playGames(self, num, verbose=False, switch=True, invert=False):
         """
         Plays num games in which player1 starts num/2 games and player2 starts
         num/2 games.
@@ -73,7 +73,12 @@ class Arena():
             draws:  games won by nobody
         """
 
-        num = int(num / 2)
+        if invert:
+            self.player1, self.player2 = self.player2, self.player1
+
+        if switch:
+            num = int(num / 2)
+        
         oneWon = 0
         twoWon = 0
         draws = 0
@@ -86,15 +91,19 @@ class Arena():
             else:
                 draws += 1
 
-        self.player1, self.player2 = self.player2, self.player1
+        if switch:
+            self.player1, self.player2 = self.player2, self.player1
 
-        for _ in tqdm(range(num), desc="Arena.playGames (2)"):
-            gameResult = self.playGame(verbose=verbose)
-            if gameResult == -1:
-                oneWon += 1
-            elif gameResult == 1:
-                twoWon += 1
-            else:
-                draws += 1
+            for _ in tqdm(range(num), desc="Arena.playGames (2)"):
+                gameResult = self.playGame(verbose=verbose)
+                if gameResult == -1:
+                    oneWon += 1
+                elif gameResult == 1:
+                    twoWon += 1
+                else:
+                    draws += 1
+
+        if invert:
+            self.player1, self.player2 = self.player2, self.player1
 
         return oneWon, twoWon, draws

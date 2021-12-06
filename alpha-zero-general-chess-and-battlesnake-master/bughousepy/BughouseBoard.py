@@ -3,11 +3,8 @@ All implementation credit for this goes to https://github.com/AnishN/bugaboo/blo
 the MIT license.
 """
 
-import re
-from enum import Enum
-from chess.variant import CrazyhouseBoard, CrazyhousePocket
+from chess.variant import CrazyhouseBoard
 import chess
-import numpy as np
 
 FIRST_BOARD = 0
 SECOND_BOARD = 1
@@ -58,19 +55,11 @@ class BughouseBoard(object):
         other_board_num = not(board_num)
         board = self.boards[board_num]
         other_board = self.boards[other_board_num]
+        other_board_result = check_crazyhouse_draw(other_board)
         orig_turn = board.turn
 
         # print(board)
         # print("Turn:", board.turn)
-        # print("White:")
-        # print(bitboard_to_array(board.occupied_co[chess.WHITE]))
-        # print("Black:")
-        # print(bitboard_to_array(board.occupied_co[chess.BLACK]))
-        # touched = chess.BB_SQUARES[move.from_square] ^ chess.BB_SQUARES[move.to_square]
-        # print("Touched:")
-        # print(bitboard_to_array(touched))
-        # print("Capture:")
-        # print(bitboard_to_array(touched & board.occupied_co[not board.turn]))
         is_capture = board.is_capture(move)
         # print("Is Capture:", is_capture)
         #is_castling = board.is_castling(move)
@@ -100,26 +89,19 @@ class BughouseBoard(object):
                     capture_piece_type = chess.PAWN
                 board.push(move)
                 board.pockets[not(board.turn)].remove(capture_piece_type)#undo crazyhouse pocket rules
-                if not check_crazyhouse_draw(other_board):
+                if not other_board_result:
                     other_board.pockets[board.turn].add(capture_piece_type)#and do bughouse pocket rules
         else:
             board.push(move)
 
         self.half_move_counts[board_num] += 1
-        
-        # if board.result() == "1/2-1/2" or other_board.result() == "1/2-1/2":
-        #     print("FIRST BOARD:", self.first_board.result())
-        #     print("SECOND BOARD:", self.second_board.result())
 
-        if check_crazyhouse_draw(board) and not check_crazyhouse_draw(other_board):
+        if check_crazyhouse_draw(board) and not other_board_result:
             other_board.turn = orig_turn
             self.active_board = other_board_num
 
-        elif self.first_board.turn != self.second_board.turn and not check_crazyhouse_draw(other_board):
+        elif self.first_board.turn != self.second_board.turn and not other_board_result:
             self.active_board = other_board_num
-
-        # if self.first_board.turn != self.second_board.turn:
-        #     self.active_board = other_board_num
 
         #print("after", board.fen())
 
@@ -161,7 +143,7 @@ class BughouseBoard(object):
             return "1-0"
         elif r1 == "0-1" or r2 == "1-0":
             return "0-1"
-        elif check_crazyhouse_draw(self.first_board) and check_crazyhouse_draw(self.second_board):
+        elif check_crazyhouse_draw(self.first_board, result=r1) and check_crazyhouse_draw(self.second_board, result=r2):
             return "1/2-1/2"
         else:
             return "*"
@@ -173,9 +155,8 @@ class BughouseBoard(object):
             + ' '.join(second_board.fen().split(' ')[:-1]) + f' {self.half_move_counts[SECOND_BOARD]//2} ' \
                 + str(int(self.active_board))
 
-    def in_sync(self):
-        # We assume that the bot is playing black on board 1 and white on board 2, and that the first player has made their move
-        return self.boards[FIRST_BOARD].ply() == self.boards[SECOND_BOARD].ply() + 1
+    def pos_string(self):
+        return self.first_board.fen().split(' ')[0] + ' ' + self.second_board.fen().split(' ')[0]
 
     def visualize(self):
         first_board = str(self.boards[FIRST_BOARD]).split('\n')
@@ -188,18 +169,5 @@ class BughouseBoard(object):
     def parse_san(self, board_num, san):
         return self.boards[board_num].parse_san(san)
 
-def check_crazyhouse_draw(board: CrazyhouseBoard):
-    return board.result() == "1/2-1/2" or board.halfmove_clock >= 75
-
-def bitboards_to_array(bb: np.ndarray) -> np.ndarray:
-    bb = np.asarray(bb, dtype=np.uint64)[:, np.newaxis]
-    s = 8 * np.arange(7, -1, -1, dtype=np.uint64)
-    b = (bb >> s).astype(np.uint8)
-    b = np.unpackbits(b, bitorder="little")
-    return b.reshape(-1, 8, 8)
-
-def bitboard_to_array(bb: int) -> np.ndarray:
-    s = 8 * np.arange(7, -1, -1, dtype=np.uint64)
-    b = (bb >> s).astype(np.uint8)
-    b = np.unpackbits(b, bitorder="little")
-    return b.reshape(8, 8)
+def check_crazyhouse_draw(board: CrazyhouseBoard, result=None):
+    return (result if result is not None else board.result()) == "1/2-1/2" or board.halfmove_clock >= 50

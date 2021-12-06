@@ -1,7 +1,9 @@
 import chess
-import random
+from chess.variant import CrazyhouseBoard
+from .BughouseBoard import BughouseBoard
+from .BughouseNNRepresentation import move_to_index
+
 import numpy as np
-from chesspy.BughouseGame import libPlayerToBughousePlayer, from_move, mirror_move
 
 # code taken from https://github.com/namin/alpha-zero-general/tree/_chess
 
@@ -10,94 +12,199 @@ class RandomPlayer():
         self.game = game
 
     def play(self, board):
-        valids = self.game.getValidMoves(board, libPlayerToBughousePlayer(board.turn))
-        moves = np.argwhere(valids==1)
-        return random.choice(moves)[0]
+        valids = self.game.getValidMoves(board, None)
+        moves = np.argwhere(valids==1).squeeze(-1)
+        return np.random.choice(moves)
 
-def move_from_uci(board, uci):
-    try:
-        move = chess.Move.from_uci(uci)
-    except ValueError:
-        print('expected an UCI move')
-        return None
-    if move not in board.legal_moves:
-        print('expected a valid move')
-        return None
-    return move
 
-class HumanBughousePlayer():
-    def __init__(self, game):
-        pass
+CONSTANTS = {
+	chess.PAWN: [0,   0,   0,   0,   0,   0,   0,   0,
+    60,  60,  60,  60,  70,  60,  60,  60,
+    40,  40,  40,  50,  60,  40,  40,  40,
+    20,  20,  20,  40,  50,  20,  20,  20,
+     5,   5,  15,  30,  40,  10,   5,   5,
+     5,   5,  10,  20,  30,   5,   5,   5,
+     5,   5,   5, -30, -30,   5,   5,   5,
+     0,   0,   0,   0,   0,   0,   0,   0], 
+	chess.KNIGHT: [-20, -10,  -10,  -10,  -10,  -10,  -10,  -20,
+    -10,  -5,   -5,   -5,   -5,   -5,   -5,  -10,
+    -10,  -5,   15,   15,   15,   15,   -5,  -10,
+    -10,  -5,   15,   15,   15,   15,   -5,  -10,
+    -10,  -5,   15,   15,   15,   15,   -5,  -10,
+    -10,  -5,   10,   15,   15,   15,   -5,  -10,
+    -10,  -5,   -5,   -5,   -5,   -5,   -5,  -10,
+    -20,   0,  -10,  -10,  -10,  -10,    0,  -20],
+	chess.BISHOP: [    -20,    0,    0,    0,    0,    0,    0,  -20,
+    -15,    0,    0,    0,    0,    0,    0,  -15,
+    -10,    0,    0,    5,    5,    0,    0,  -10,
+    -10,   10,   10,   30,   30,   10,   10,  -10,
+      5,    5,   10,   25,   25,   10,    5,    5,
+      5,    5,    5,   10,   10,    5,    5,    5,
+    -10,    5,    5,   10,   10,    5,    5,  -10,
+    -20,  -10,  -10,  -10,  -10,  -10,  -10,  -20], 
+	chess.ROOK: [    0,   0,   0,   0,   0,   0,   0,   0,
+   15,  15,  15,  20,  20,  15,  15,  15,
+    0,   0,   0,   0,   0,   0,   0,   0,
+    0,   0,   0,   0,   0,   0,   0,   0,
+    0,   0,   0,   0,   0,   0,   0,   0,
+    0,   0,   0,   0,   0,   0,   0,   0,
+    0,   0,   0,   0,   0,   0,   0,   0,
+    0,   0,   0,  10,  10,  10,   0,   0], 
+	chess.KING: [0,    0,     0,     0,    0,    0,    0,    0,
+				0,    0,     0,     0,    0,    0,    0,    0,
+				0,    0,     0,     0,    0,    0,    0,    0,
+				0,    0,     0,    20,   20,    0,    0,    0,
+				0,    0,     0,    20,   20,    0,    0,    0,
+				0,    0,     0,     0,    0,    0,    0,    0,
+				0,    0,     0,   -10,  -10,    0,    0,    0,
+				0,    0,    20,   -10,  -10,    0,   20,    0], 
+	chess.QUEEN: [-30,  -20,  -10,  -10,  -10,  -10,  -20,  -30,
+			    -20,  -10,   -5,   -5,   -5,   -5,  -10,  -20,
+			    -10,   -5,   10,   10,   10,   10,   -5,  -10,
+			    -10,   -5,   10,   20,   20,   10,   -5,  -10,
+			    -10,   -5,   10,   20,   20,   10,   -5,  -10,
+			    -10,   -5,   -5,   -5,   -5,   -5,   -5,  -10,
+			    -20,  -10,   -5,   -5,   -5,   -5,  -10,  -20,
+			    -30,  -20,  -10,  -10,  -10,  -10,  -20,  -30]
+}
 
-    def play(self, board):
-        human_move = input()
-        mboard = board
-        if board.turn:
-            mboard = board.mirror()
-        move = move_from_uci(mboard, human_move.strip())
-        if move is None:
-            print('try again, e.g., %s' % random.choice(list(mboard.legal_moves)).uci())
-            return self.play(board)
-        if board.turn:
-            move = mirror_move(move)
-        return from_move(move)
+ALL_PIECES = [chess.PAWN, chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.KING, chess.QUEEN]
 
-class StrategicBughousePlayer():
-    def __init__(self, game, strategy):
-        self.strategy = strategy
+piece_values = {
+	chess.PAWN: 100,
+	chess.KNIGHT: 310,
+	chess.BISHOP: 320,
+	chess.ROOK: 500,
+	chess.QUEEN: 900,
+	chess.KING: 100000
+}
 
-    def play(self, board):
-        mboard = board
-        if board.turn:
-            mboard = board.mirror()
-        move = self.strategy(mboard)
-        if board.turn:
-            move = mirror_move(move)
-        return from_move(move)
+LARGE_NUM = 1000000
 
-MIN_SCORE = -1000
-MAX_SCORE = -MIN_SCORE
+# By making the piece more value in the "bag," the piece implicitly doesn't have as high of an incentive to be dropped.
+# intuition is that pawns/bishops
+# droppable_scalar = {
+# 	chess.PAWN: .5,
+# 	chess.KNIGHT: .5,
+# 	chess.BISHOP: .4,
+# 	chess.ROOK: 1,
+# 	chess.QUEEN: 1,
+# 	chess.KING: 0 # included to make the code later not need a special case.
+# }
 
-piece_values = {chess.KING: 0,
-                chess.PAWN: 1,
-                chess.BISHOP: 3,
-                chess.KNIGHT: 3,
-                chess.ROOK: 5,
-                chess.QUEEN: 9}
+def evaluate_board(board: CrazyhouseBoard, color):
+    eval_score_curr_player = 100 # Total Eval Score for the current position.  Start at 100 just to ensure > 0
 
-def evaluate_board(board):
-    score = 0
-    for piece in board.piece_map().values():
-        value = piece_values[piece.piece_type]
-        factor = 1 if piece.color == board.turn else -1
-        score += factor * value
-    score -= 100 if board.is_checkmate() else 0
-    return score
+    if board.is_checkmate():
+        return LARGE_NUM # For all intents and purposes +inf
 
-def evaluate_move(move, board, evaluate_board):
-    board.push(move)
-    score = -evaluate_board(board)
-    board.pop()
-    return score
+    # Raw Material
+    for piece in ALL_PIECES:
+        for piece_instance in board.pieces(piece, color):
+            white_equiv = (7 - piece_instance // 8, piece_instance % 8)
+            white_equiv = white_equiv[0] * 8 + white_equiv[1]
+            eval_score_curr_player += piece_values[piece] + CONSTANTS[piece][piece_instance if color == chess.BLACK else white_equiv]
 
-def evaluation_strategy(board, evaluate_move):
-    best_moves = []
-    best_score = MIN_SCORE
-    for move in board.legal_moves:
-        score = evaluate_move(move, board)
-        if score > best_score:
-           best_score = score
-           best_moves = [move]
-        elif score == best_score:
-           best_moves.append(move)
-    return random.choice(best_moves)
+    # Material Held in Pocket
+	# for piece in ALL_PIECES:
+	# 	# print(piece)
+	# 	eval_score_curr_player += piece_values[piece] * droppable_scalar[piece] \
+	# 	 * board.pockets[color].count(piece)
 
-def static_evaluate_move(move, board):
-    return evaluate_move(move, board, evaluate_board)
+    return eval_score_curr_player
 
-def static_strategy(board):
-    return evaluation_strategy(board, static_evaluate_move)
+class MinimaxBughousePlayer():
 
-class StaticBughousePlayer(StrategicBughousePlayer):
-    def __init__(self, game):
-        super().__init__(game, static_strategy)
+    def __init__(self, depth):
+        self.depth = depth
+
+    def play(self, board: BughouseBoard):
+
+        start_with_maximizing = board.turn == chess.WHITE
+        
+        alpha = -LARGE_NUM
+        beta = LARGE_NUM
+        tp_table = {} # We don't need to evaluate the same board twice.  Essentially memoization for a chess engine
+
+        best_move = None
+        best_move_score = -LARGE_NUM if start_with_maximizing else LARGE_NUM
+
+        if board.get_active_board().turn == chess.BLACK:
+            board = board.mirror()
+        
+        for move in board.get_active_board().legal_moves:
+
+            new_board = board.copy()
+            self.move_(new_board, move)
+
+            score = self.perform_tree_search_(new_board, self.depth, not start_with_maximizing, alpha, beta, tp_table)
+
+            if start_with_maximizing and score > best_move_score:
+                best_move = move
+                best_move_score = score
+                alpha = max(alpha, best_move_score)
+
+            elif not start_with_maximizing and score < best_move_score:
+                best_move = move
+                best_move_score = score
+                beta = min(beta, best_move_score)
+            
+        return move_to_index[best_move.uci()]
+
+    # Performs AB minimax search given a depth, player, a, b, and transposition table
+    # Based on https://github.com/rselwyn/tactic-generator/blob/master/src/engine.cpp#L167
+    def perform_tree_search_(self, board: BughouseBoard, depth, isMaximizing, alpha, beta, tp_table):
+        
+        if depth == 0:
+            return self.evaluate_(board)
+
+        # if board.pos_string() in tp_table:
+        # 	return tp_table[board.pos_string()] # memoization
+
+        if isMaximizing:
+            bestValue = - LARGE_NUM
+            for candidate_move in board.get_active_board().legal_moves:
+                new_board = board.copy()
+                self.move_(new_board, candidate_move)
+                minimax_result = self.perform_tree_search_(new_board, depth - 1, not isMaximizing, alpha, beta, tp_table)
+                bestValue = max(bestValue, minimax_result)
+                alpha = max(alpha, bestValue)
+
+                if alpha > beta:
+                    break
+
+            # tp_table[board.pos_string()] = bestValue
+            return bestValue
+        else:
+            bestValue = LARGE_NUM
+            for candidate_move in board.get_active_board().legal_moves:
+                new_board = board.copy()
+                self.move_(new_board, candidate_move)
+                minimax_result = self.perform_tree_search_(new_board, depth - 1, not isMaximizing, alpha, beta, tp_table)
+                bestValue = min(bestValue, minimax_result)
+                beta = min(beta, bestValue)
+
+                if beta < alpha:
+                    break
+
+            # tp_table[board.pos_string()] = bestValue
+            return bestValue
+
+    def move_(self, board: BughouseBoard, move):
+        board.move(move)
+
+    def evaluate_(self, board: BughouseBoard):
+        # We assume that the team is of White P1 Black P2 vs Black P1 White P2
+        return evaluate_board(board.boards[0], chess.WHITE) + evaluate_board(board.boards[1], chess.BLACK) - \
+                evaluate_board(board.boards[0], chess.BLACK) - evaluate_board(board.boards[1], chess.WHITE)
+
+
+class LazyMinimaxBughousePlayer(MinimaxBughousePlayer):
+
+    def move_(self, board: BughouseBoard, move):
+        active_board = board.active_board
+        board.move(move)
+        board.active_board = active_board
+
+    def evaluate_(self, board: BughouseBoard):
+        return evaluate_board(board.get_active_board(), board.active_board^chess.WHITE) - evaluate_board(board.get_active_board(), board.active_board^chess.BLACK)

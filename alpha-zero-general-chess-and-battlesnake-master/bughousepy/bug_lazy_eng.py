@@ -117,7 +117,9 @@ def best_move(board: BughouseBoard, depth):
 		# print(move)
 
 		new_board = board.copy()
+		active_board = new_board.active_board
 		new_board.move(move)
+		new_board.active_board = active_board
 
 		score = perform_tree_search_(new_board, depth, not start_with_maximizing, alpha, beta, tp_table, nodes)
 		"""
@@ -161,7 +163,9 @@ def perform_tree_search_(board: BughouseBoard, depth, isMaximizing, alpha, beta,
 		for candidate_move in board.get_active_board().legal_moves:
 			# print("pushing candidate", candidate_move)
 			new_board = board.copy()
+			active_board = new_board.active_board
 			new_board.move(candidate_move)
+			new_board.active_board = active_board
 			minimax_result = perform_tree_search_(new_board, depth - 1, not isMaximizing, alpha, beta, tp_table, nodes_hit)
 			bestValue = max(bestValue, minimax_result)
 			alpha = max(alpha, bestValue)
@@ -177,7 +181,9 @@ def perform_tree_search_(board: BughouseBoard, depth, isMaximizing, alpha, beta,
 		for candidate_move in board.get_active_board().legal_moves:
 			# print("pushing candidate", candidate_move)
 			new_board = board.copy()
+			active_board = new_board.active_board
 			new_board.move(candidate_move)
+			new_board.active_board = active_board
 			minimax_result = perform_tree_search_(new_board, depth - 1, not isMaximizing, alpha, beta, tp_table, nodes_hit)
 			bestValue = min(bestValue, minimax_result)
 			beta = min(beta, bestValue)
@@ -189,8 +195,8 @@ def perform_tree_search_(board: BughouseBoard, depth, isMaximizing, alpha, beta,
 		return bestValue
 
 
-
 def evaluate_(board: BughouseBoard):
 	# We assume that the team is of White P1 Black P2 vs Black P1 White P2
-	return evaluate_board(board.boards[0], chess.WHITE) + evaluate_board(board.boards[1], chess.BLACK) - \
-			 evaluate_board(board.boards[0], chess.BLACK) - evaluate_board(board.boards[1], chess.WHITE)
+	return evaluate_board(board.get_active_board(), board.active_board^chess.WHITE) - evaluate_board(board.get_active_board(), board.active_board^chess.BLACK)
+	# return evaluate_board(board.boards[0], chess.WHITE) + evaluate_board(board.boards[1], chess.BLACK) - \
+	# 		 evaluate_board(board.boards[0], chess.BLACK) - evaluate_board(board.boards[1], chess.WHITE)

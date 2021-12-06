@@ -1,10 +1,11 @@
 import chess
 from chess.variant import CrazyhouseBoard
 from .BughouseBoard import BughouseBoard
-from .BughouseNNRepresentation import move_to_index
+from .BughouseNNRepresentation import move_to_index, board_to_input
 from bughousepy.tensorflow.NNet import NNetWrapper as BughouseTensorflowNNet
 from utils import dotdict
 from MCTS import MCTS
+import pickle
 
 import numpy as np
 
@@ -232,4 +233,43 @@ class NNBughousePlayer():
 
     def callback(self):
         self.mcts = MCTS(self.game, self.nnet, self.args)
+
+
+class SupervisedPlayer():
+
+    def __init__(self, filename):
+        with open(filename, 'rb') as f:
+            self.model = pickle.load(f)
+
+    def __call__(self, board: BughouseBoard):
+
+        start_with_maximizing = board.turn == chess.WHITE
         
+        alpha = -LARGE_NUM
+        beta = LARGE_NUM
+        tp_table = {} # We don't need to evaluate the same board twice.  Essentially memoization for a chess engine
+
+        best_move = None
+        best_move_score = -LARGE_NUM if start_with_maximizing else LARGE_NUM
+
+        if board.get_active_board().turn == chess.BLACK:
+            board = board.mirror()
+        
+        possible_boards = []
+        for move in board.get_active_board().legal_moves:
+
+            new_board = board.copy()
+            self.move_(new_board, move)
+            
+            possible_boards.append(board_to_input(new_board).flatten())
+        
+        possible_boards = np.stack(possible_boards).astype(np.int8)
+        scores = self.model.predict(possible_boards)
+        
+        best_move_index = np.amax(scores, axis=0)
+        best_move = board.get_active_board().legal_moves()[best_move_index]
+            
+        return move_to_index[best_move.uci()]
+
+    def move_(self, board: BughouseBoard, move):
+        board.move(move)

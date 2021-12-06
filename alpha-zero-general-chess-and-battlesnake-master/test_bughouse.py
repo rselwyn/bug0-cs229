@@ -2,7 +2,7 @@ import Arena
 from utils import *
 
 from bughousepy.BughouseGame import BughouseGame
-from bughousepy.BughousePlayers import RandomPlayer, MinimaxBughousePlayer, LazyMinimaxBughousePlayer, NNBughousePlayer
+from bughousepy.BughousePlayers import RandomPlayer, MinimaxBughousePlayer, LazyMinimaxBughousePlayer, NNBughousePlayer, SupervisedPlayer
 
 import numpy as np
 # np.random.seed(0)
@@ -23,6 +23,8 @@ game = BughouseGame()
 rp = RandomPlayer(game=game)
 eng = LazyMinimaxBughousePlayer(depth=1)
 n1p = NNBughousePlayer(game=game, numMCTSSims=5, filename='checkpoint_25.pth.tar')
+
+sp = SupervisedPlayer(filename='../q_learning/model/saved_models/LinearRegression.sav')
 
 arena = Arena.Arena(n1p, rp, game, display=lambda board: game.display(board, visualize=False, string_rep=True, result=True))
 

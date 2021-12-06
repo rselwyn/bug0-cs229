@@ -9,23 +9,26 @@ sys.path.append('../../')
 from utils import *
 from NeuralNet import NeuralNet
 
-import tensorflow as tf
-from .OthelloNNet import OthelloNNet as onnet
+import tensorflow._api.v2.compat.v1 as tf
+from .BughouseNNet import ResNet as BughouseNNet
+from ..BughouseNNRepresentation import board_to_input
 
 args = dotdict({
     'lr': 0.001,
     'dropout': 0.3,
     'epochs': 10,
     'batch_size': 64,
-    'num_channels': 512,
+    'num_channels': 256,
 })
 
 
 class NNetWrapper(NeuralNet):
     def __init__(self, game):
-        self.nnet = onnet(game, args)
-        self.board_x, self.board_y = game.getBoardSize()
+        self.nnet = BughouseNNet(game, args)
+        self.board_channels, self.board_x, self.board_y = game.getBoardSize()
         self.action_size = game.getActionSize()
+
+        tf.disable_eager_execution()
 
         self.sess = tf.Session(graph=self.nnet.graph)
         self.saver = None
@@ -49,7 +52,8 @@ class NNetWrapper(NeuralNet):
             for _ in t:
                 sample_ids = np.random.randint(len(examples), size=args.batch_size)
                 boards, pis, vs = list(zip(*[examples[i] for i in sample_ids]))
-
+                boards = [board_to_input(b) for b in boards]
+                
                 # predict and compute gradient and do SGD step
                 input_dict = {self.nnet.input_boards: boards, self.nnet.target_pis: pis, self.nnet.target_vs: vs,
                               self.nnet.dropout: args.dropout, self.nnet.isTraining: True}
@@ -69,7 +73,7 @@ class NNetWrapper(NeuralNet):
         start = time.time()
 
         # preparing input
-        board = board[np.newaxis, :, :]
+        board = board_to_input(board)[np.newaxis, :, :]
 
         # run
         prob, v = self.sess.run([self.nnet.prob, self.nnet.v],

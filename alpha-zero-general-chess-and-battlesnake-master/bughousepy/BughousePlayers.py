@@ -2,6 +2,9 @@ import chess
 from chess.variant import CrazyhouseBoard
 from .BughouseBoard import BughouseBoard
 from .BughouseNNRepresentation import move_to_index
+from bughousepy.tensorflow.NNet import NNetWrapper as BughouseTensorflowNNet
+from utils import dotdict
+from MCTS import MCTS
 
 import numpy as np
 
@@ -11,7 +14,7 @@ class RandomPlayer():
     def __init__(self, game):
         self.game = game
 
-    def play(self, board):
+    def __call__(self, board):
         valids = self.game.getValidMoves(board, None)
         moves = np.argwhere(valids==1).squeeze(-1)
         return np.random.choice(moves)
@@ -118,7 +121,7 @@ class MinimaxBughousePlayer():
     def __init__(self, depth):
         self.depth = depth
 
-    def play(self, board: BughouseBoard):
+    def __call__(self, board: BughouseBoard):
 
         start_with_maximizing = board.turn == chess.WHITE
         
@@ -208,3 +211,25 @@ class LazyMinimaxBughousePlayer(MinimaxBughousePlayer):
 
     def evaluate_(self, board: BughouseBoard):
         return evaluate_board(board.get_active_board(), board.active_board^chess.WHITE) - evaluate_board(board.get_active_board(), board.active_board^chess.BLACK)
+
+
+class NNBughousePlayer():
+
+    def __init__(self, game, numMCTSSims, cpuct=1.0, nnet=BughouseTensorflowNNet, folder='temp', filename=None):
+
+        self.game = game
+        self.nnet = nnet(self.game)
+
+        if filename is not None:
+            self.nnet.load_checkpoint(folder=folder, filename=filename)
+            print(f"Loaded checkpoint {filename}")
+
+        self.args = dotdict({'numMCTSSims': numMCTSSims, 'cpuct': cpuct})
+        self.mcts = MCTS(game, self.nnet, self.args)
+
+    def __call__(self, board):
+        return np.argmax(self.mcts.getActionProb(board, temp=0))
+
+    def callback(self):
+        self.mcts = MCTS(self.game, self.nnet, self.args)
+        

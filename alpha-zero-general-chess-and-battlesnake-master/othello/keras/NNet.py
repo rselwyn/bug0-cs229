@@ -7,7 +7,7 @@ import numpy as np
 import math
 import sys
 sys.path.append('../..')
-from util import *
+from utils import *
 from NeuralNet import NeuralNet
 
 import argparse

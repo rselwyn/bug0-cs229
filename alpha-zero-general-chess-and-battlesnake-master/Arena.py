@@ -90,6 +90,7 @@ class Arena():
                 twoWon += 1
             else:
                 draws += 1
+            self.do_callbacks()
 
         if switch:
             self.player1, self.player2 = self.player2, self.player1
@@ -102,8 +103,16 @@ class Arena():
                     twoWon += 1
                 else:
                     draws += 1
+                self.do_callbacks()
 
         if invert:
             self.player1, self.player2 = self.player2, self.player1
 
         return oneWon, twoWon, draws
+
+    def do_callbacks(self):
+        
+        if hasattr(self.player1, 'callback'):
+            self.player1.callback()
+        if hasattr(self.player2, 'callback'):
+            self.player2.callback()

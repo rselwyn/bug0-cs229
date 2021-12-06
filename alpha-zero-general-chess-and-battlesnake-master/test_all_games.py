@@ -46,7 +46,7 @@ from othello.keras.NNet import NNetWrapper as OthelloKerasNNet
 # from gobang.tensorflow.NNet import NNetWrapper as GobangTensorflowNNet
 
 import numpy as np
-from util import *
+from utils import *
 
 class TestAllGames(unittest.TestCase):
 

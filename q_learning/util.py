@@ -53,6 +53,8 @@ def dataset_to_array(data_dict, tqdm, max_n=None):
             if i >= iter_max-1:
                 break
     assert len(states) == len(values)
-    states = np.stack(states)
+    states = np.stack(states).astype(np.int8)
     values = np.stack(values)
     return states, values
+
+

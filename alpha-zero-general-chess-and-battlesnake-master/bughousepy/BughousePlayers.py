@@ -29,7 +29,7 @@ CONSTANTS = {
      5,   5,  15,  30,  40,  10,   5,   5,
      5,   5,  10,  20,  30,   5,   5,   5,
      5,   5,   5, -30, -30,   5,   5,   5,
-     0,   0,   0,   0,   0,   0,   0,   0], 
+     0,   0,   0,   0,   0,   0,   0,   0],
 	chess.KNIGHT: [-20, -10,  -10,  -10,  -10,  -10,  -10,  -20,
     -10,  -5,   -5,   -5,   -5,   -5,   -5,  -10,
     -10,  -5,   15,   15,   15,   15,   -5,  -10,
@@ -45,7 +45,7 @@ CONSTANTS = {
       5,    5,   10,   25,   25,   10,    5,    5,
       5,    5,    5,   10,   10,    5,    5,    5,
     -10,    5,    5,   10,   10,    5,    5,  -10,
-    -20,  -10,  -10,  -10,  -10,  -10,  -10,  -20], 
+    -20,  -10,  -10,  -10,  -10,  -10,  -10,  -20],
 	chess.ROOK: [    0,   0,   0,   0,   0,   0,   0,   0,
    15,  15,  15,  20,  20,  15,  15,  15,
     0,   0,   0,   0,   0,   0,   0,   0,
@@ -53,7 +53,7 @@ CONSTANTS = {
     0,   0,   0,   0,   0,   0,   0,   0,
     0,   0,   0,   0,   0,   0,   0,   0,
     0,   0,   0,   0,   0,   0,   0,   0,
-    0,   0,   0,  10,  10,  10,   0,   0], 
+    0,   0,   0,  10,  10,  10,   0,   0],
 	chess.KING: [0,    0,     0,     0,    0,    0,    0,    0,
 				0,    0,     0,     0,    0,    0,    0,    0,
 				0,    0,     0,     0,    0,    0,    0,    0,
@@ -61,7 +61,7 @@ CONSTANTS = {
 				0,    0,     0,    20,   20,    0,    0,    0,
 				0,    0,     0,     0,    0,    0,    0,    0,
 				0,    0,     0,   -10,  -10,    0,    0,    0,
-				0,    0,    20,   -10,  -10,    0,   20,    0], 
+				0,    0,    20,   -10,  -10,    0,   20,    0],
 	chess.QUEEN: [-30,  -20,  -10,  -10,  -10,  -10,  -20,  -30,
 			    -20,  -10,   -5,   -5,   -5,   -5,  -10,  -20,
 			    -10,   -5,   10,   10,   10,   10,   -5,  -10,
@@ -125,7 +125,7 @@ class MinimaxBughousePlayer():
     def __call__(self, board: BughouseBoard):
 
         start_with_maximizing = board.turn == chess.WHITE
-        
+
         alpha = -LARGE_NUM
         beta = LARGE_NUM
         tp_table = {} # We don't need to evaluate the same board twice.  Essentially memoization for a chess engine
@@ -135,7 +135,7 @@ class MinimaxBughousePlayer():
 
         if board.get_active_board().turn == chess.BLACK:
             board = board.mirror()
-        
+
         for move in board.get_active_board().legal_moves:
 
             new_board = board.copy()
@@ -152,13 +152,13 @@ class MinimaxBughousePlayer():
                 best_move = move
                 best_move_score = score
                 beta = min(beta, best_move_score)
-            
+
         return move_to_index[best_move.uci()]
 
     # Performs AB minimax search given a depth, player, a, b, and transposition table
     # Based on https://github.com/rselwyn/tactic-generator/blob/master/src/engine.cpp#L167
     def perform_tree_search_(self, board: BughouseBoard, depth, isMaximizing, alpha, beta, tp_table):
-        
+
         if depth == 0:
             return self.evaluate_(board)
 
@@ -244,7 +244,7 @@ class SupervisedPlayer():
     def __call__(self, board: BughouseBoard):
 
         start_with_maximizing = board.turn == chess.WHITE
-        
+
         alpha = -LARGE_NUM
         beta = LARGE_NUM
         tp_table = {} # We don't need to evaluate the same board twice.  Essentially memoization for a chess engine
@@ -254,21 +254,21 @@ class SupervisedPlayer():
 
         if board.get_active_board().turn == chess.BLACK:
             board = board.mirror()
-        
+
         possible_boards = []
         for move in board.get_active_board().legal_moves:
 
             new_board = board.copy()
             self.move_(new_board, move)
-            
+
             possible_boards.append(board_to_input(new_board).flatten())
-        
+
         possible_boards = np.stack(possible_boards).astype(np.int8)
         scores = self.model.predict(possible_boards)
-        
-        best_move_index = np.amax(scores, axis=0)
-        best_move = board.get_active_board().legal_moves()[best_move_index]
-            
+
+        best_move_index = np.argmax(scores, axis=0)
+        best_move = list(board.get_active_board().legal_moves)[best_move_index]
+
         return move_to_index[best_move.uci()]
 
     def move_(self, board: BughouseBoard, move):

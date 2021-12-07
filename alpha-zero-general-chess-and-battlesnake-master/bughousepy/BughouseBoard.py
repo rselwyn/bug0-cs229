@@ -41,15 +41,20 @@ class BughouseBoard(object):
         return self.boards[SECOND_BOARD]
 
     def reset(self):
-        first_board = self.boards[FIRST_BOARD]
-        second_board = self.boards[SECOND_BOARD]
-        first_board.set_fen(chess.STARTING_FEN)
-        second_board.set_fen(chess.STARTING_FEN)
+        self.first_board.set_fen(chess.STARTING_FEN)
+        self.second_board.set_fen(chess.STARTING_FEN)
         self.active_board = FIRST_BOARD
+        self.half_move_counts = {
+            FIRST_BOARD: 0,
+            SECOND_BOARD: 0,
+        }
 
-    def move(self, move):
+    def move(self, move, board_to_move=None):
 
-        board_num = self.active_board
+        if board_to_move is None:
+            board_num = self.active_board
+        else:
+            board_num = board_to_move
 
         #print(move_number, san, board_num)
         other_board_num = not(board_num)
@@ -96,12 +101,14 @@ class BughouseBoard(object):
 
         self.half_move_counts[board_num] += 1
 
-        if check_crazyhouse_draw(board) and not other_board_result:
-            other_board.turn = orig_turn
-            self.active_board = other_board_num
+        if board_to_move is None:
 
-        elif self.first_board.turn != self.second_board.turn and not other_board_result:
-            self.active_board = other_board_num
+            if check_crazyhouse_draw(board) and not other_board_result:
+                other_board.turn = orig_turn
+                self.active_board = other_board_num
+
+            elif self.first_board.turn != self.second_board.turn and not other_board_result:
+                self.active_board = other_board_num
 
         #print("after", board.fen())
 
@@ -110,7 +117,7 @@ class BughouseBoard(object):
 
     def copy(self):
         
-        new_board = BughouseBoard(self.first_board.copy(), self.second_board.copy())
+        new_board = BughouseBoard(self.first_board.copy(stack=False), self.second_board.copy(stack=False))
         new_board.active_board = self.active_board
         new_board.half_move_counts[FIRST_BOARD] = self.half_move_counts[FIRST_BOARD]
         new_board.half_move_counts[SECOND_BOARD] = self.half_move_counts[SECOND_BOARD]

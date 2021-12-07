@@ -22,15 +22,15 @@ game = BughouseGame()
 
 rp = RandomPlayer(game=game)
 eng = LazyMinimaxBughousePlayer(depth=1)
-n1p = NNBughousePlayer(game=game, numMCTSSims=5, filename='checkpoint_25.pth.tar')
+n1p = NNBughousePlayer(game=game, numMCTSSims=5, filename='checkpoint_1.pth.tar')
 
-arena = Arena.Arena(n1p, rp, game, display=lambda board: game.display(board, visualize=False, string_rep=True, result=True))
+# arena = Arena.Arena(n1p, rp, game, display=lambda board: game.display(board, visualize=False, string_rep=True, result=True))
 
-print(arena.playGames(100, verbose=False, switch=True))
+# print(arena.playGames(100, verbose=False, switch=True))
 
-arena = Arena.Arena(n1p, eng, game, display=lambda board: game.display(board, visualize=False, string_rep=True, result=True))
+arena = Arena.Arena(rp, n1p, game, display=lambda board: game.display(board, visualize=False, string_rep=False, result=False))
 
-print(arena.playGames(100, verbose=False, switch=True))
+print(arena.playGames(100, verbose=True, switch=False))
 
 # print(arena.playGames(100, verbose=False, switch=False, invert=True))
 

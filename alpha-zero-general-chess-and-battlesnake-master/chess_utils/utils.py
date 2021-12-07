@@ -131,6 +131,8 @@ def alg_to_coord(alg):
     file = ord(alg[0]) - ord('a')  # 0-7
     return rank, file
 
+def swap_uci_label(move: str):
+    return ''.join([str(9-int(x)) if x.isdigit() else x for x in move])
 
 # https://chess.stackexchange.com/questions/29294/quickly-converting-board-to-bitboard-representation-using-python-chess-library
 

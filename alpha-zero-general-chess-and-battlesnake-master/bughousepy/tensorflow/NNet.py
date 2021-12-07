@@ -14,10 +14,10 @@ from .BughouseNNet import ResNet as BughouseNNet
 from ..BughouseNNRepresentation import board_to_input
 
 args = dotdict({
-    'lr': 0.001,
+    'lr': 0.1,
     'dropout': 0.3,
-    'epochs': 10,
-    'batch_size': 64,
+    'epochs': 1,
+    'batch_size': 1024,
     'num_channels': 256,
 })
 

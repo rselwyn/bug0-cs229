@@ -237,9 +237,10 @@ class NNBughousePlayer():
 
 class SupervisedPlayer():
 
-    def __init__(self, filename):
+    def __init__(self, filename, starts=True):
         with open(filename, 'rb') as f:
             self.model = pickle.load(f)
+        self.team = float(2*int(starts) - 1)
 
     def __call__(self, board: BughouseBoard):
 
@@ -264,7 +265,7 @@ class SupervisedPlayer():
             possible_boards.append(board_to_input(new_board).flatten())
 
         possible_boards = np.stack(possible_boards).astype(np.int8)
-        scores = self.model.predict(possible_boards)
+        scores = self.model.predict(possible_boards) * self.team
 
         best_move_index = np.argmax(scores, axis=0)
         best_move = list(board.get_active_board().legal_moves)[best_move_index]
